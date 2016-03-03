@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+    <title>Scoop.it topic extractor</title>
+
+    <!-- CSS  -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+</head>
+<body>
+<nav class="teal lighten-1" role="navigation">
+    <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo">Scoop.it topic extractor</a>
+        <ul class="right hide-on-med-and-down">
+            <li><a href="https://twitter.com/obladycms">Made with ❤ by Oblady</a></li>
+        </ul>
+
+        <ul id="nav-mobile" class="side-nav">
+            <li><a href="#">Navbar Link</a></li>
+        </ul>
+        <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="material-icons">menu</i></a>
+    </div>
+</nav>
+<div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <span class="card-title">What the purpose of this tool ?</span>
+                        <p>This tool helps you to extract scoop.it posts of a particular topic.</p><br />
+                        <p>You can download a .csv file containing the following data related from posts associated to topic :</p>
+                        <ul>
+                            <li>- <strong>type:</strong> POST or LINK</li>
+                            <li>- <strong>url:</strong> if publication is a LINK</li>
+                            <li>- <strong>title:</strong> publication title</li>
+                            <li>- <strong>description:</strong> publication description</li>
+                            <li>- <strong>image_url:</strong> scoop.it URL of image attached to publication</li>
+                            <li>- <strong>date:</strong> publication date</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="form" class="row">
+            <h4>What's the topic to extract ?</h4>
+            <div class="input-field col s12">
+                <input id="scoopit_topic" type="text" class="validate">
+                <label for="scoopit_topic">Scoop.it {topic_slug} (you'll find it in URL : http://www.scoop.it/t/{topic_slug})</label>
+            </div>
+            <div class="input-field col s12">
+                <input id="export_button" type="submit" class="waves-effect waves-light btn" value="Extract and download corresponding .csv" />
+            </div>
+        </div>
+        <div id="processing" style="display:none;" class="row">
+            <h4>We are processing the topic ...</h4>
+            <div class="progress col s12">
+                <div id="progress" class="determinate" style="width: 0%"></div>
+            </div>
+        </div>
+        <div id="done" style="display:none;" class="row">
+            <h4>We're done here ...</h4>
+            <div class="input-field col s12">
+                <input id="new_topic" type="submit" class="waves-effect waves-light btn" value="Extract another scoop.it topic" />
+            </div>
+        </div>
+    </div>
+    <iframe id="download" style="display:none;"></iframe>
+</div>
+
+<!--  Scripts-->
+<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/js/materialize.min.js"></script>
+
+<script type="text/javascript">
+    var nb_pages;
+    var percent_by_page;
+    var percent_done;
+    var scoopit_topic;
+
+    $('#export_button').click(function(){
+        $('#form').toggle();
+        $('#processing').toggle();
+        scoopit_topic = $('#scoopit_topic').val();
+        $.getJSON('deleteCsvTopicFile?topic='+scoopit_topic,function(json){
+            if(json.error == true){
+                Materialize.toast(json.message, 10000)
+            }
+        });
+        $.getJSON('getNbPagesOfTopic?topic='+scoopit_topic,function(json){
+            nb_pages = parseInt(json.data);
+            percent_by_page = 100/parseInt(nb_pages);
+            percent_done = 0;
+
+            getPage(1);
+        });
+    });
+
+    $('#new_topic').click(function(){
+        $('#done').toggle();
+        $('#form').toggle();
+    });
+
+    function getPage(pageNumber){
+        $.getJSON('getTopicPage?topic='+scoopit_topic+'&page='+pageNumber,function(json){
+            if(json.error == true){
+                Materialize.toast(json.message, 10000);
+                $('#processing').toggle();
+                $('#form').toggle();
+            }else{
+                percent_done += percent_by_page;
+                $('#progress').css('width', percent_done+'%');
+                if(pageNumber !== nb_pages){
+                    pageNumber++;
+                    getPage(pageNumber);
+                }else{
+                    downloadCSV('scoopit_topic_'+scoopit_topic+'.csv');
+                    $('#processing').toggle();
+                    $('#done').toggle();
+                    $('#scoopit_topic').val('');
+                }
+            }
+        });
+    }
+
+    function downloadCSV(url) {
+        document.getElementById('download').src = url;
+    };
+</script>
+
+</body>
+</html>
